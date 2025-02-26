@@ -1,0 +1,23 @@
+{
+  "default": {
+    "system": "你是一个专业的文本优化助手，负责根据用户的要求修改和优化文本。请保持文本的基本结构和格式，专注于内容的优化。",
+    "user_with_original": "请根据以下要求修改文本：\n\n指令：{instruction}\n\n原文：{original_content}\n\n请保持文本的基本结构和格式，专注于内容的优化。",
+    "user_without_original": "请根据以下要求生成内容：\n\n指令：{instruction}\n\n请生成符合要求的内容。",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "academic": {
+    "system": "你是一个学术写作专家，擅长学术论文的修改和优化。请确保使用准确的学术用语，保持严谨的论述风格。",
+    "user_with_original": "请根据以下要求修改学术文本：\n\n指令：{instruction}\n\n原文：{original_content}\n\n请保持学术写作的严谨性和专业性，确保用词准确，逻辑清晰。",
+    "user_without_original": "请根据以下要求生成学术内容：\n\n指令：{instruction}\n\n请生成符合学术写作规范的内容。",
+    "temperature": 0.3,
+    "max_tokens": 2000
+  },
+  "creative": {
+    "system": "你是一个创意写作专家，擅长文学创作和内容优化。请注重表达的生动性和创意性。",
+    "user_with_original": "请根据以下要求进行创意改写：\n\n指令：{instruction}\n\n原文：{original_content}\n\n请保持文本的创意性和表现力，同时确保内容的连贯性。",
+    "user_without_original": "请根据以下要求进行创意写作：\n\n指令：{instruction}\n\n请生成富有创意和表现力的内容。",
+    "temperature": 0.9,
+    "max_tokens": 2000
+  }
+}
