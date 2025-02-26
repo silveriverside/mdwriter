@@ -30,10 +30,22 @@ class TagStyleRenderer {
   /// 渲染带有标签的文本
   static TextSpan renderTaggedText(String text) {
     final List<InlineSpan> spans = [];
-    int currentPosition = 0;
 
+    // 处理空文本情况
+    if (text.isEmpty) {
+      return const TextSpan(text: '');
+    }
+
+    int currentPosition = 0;
     // 查找所有AI标签
-    for (final aiMatch in MarkdownParser.aiTagRegex.allMatches(text)) {
+    final aiMatches = MarkdownParser.aiTagRegex.allMatches(text).toList();
+
+    for (final aiMatch in aiMatches) {
+      // 验证匹配有效性
+      if (aiMatch.start < 0 || aiMatch.end > text.length || aiMatch.start >= aiMatch.end) {
+        continue;
+      }
+
       // 添加AI标签前的普通文本
       if (aiMatch.start > currentPosition) {
         spans.add(TextSpan(
@@ -49,9 +61,10 @@ class TagStyleRenderer {
 
       // 获取AI标签内的内容
       final aiContent = aiMatch.group(1) ?? '';
-      
+
       // 检查AI内容中是否包含原文标签
-      final originMatches = MarkdownParser.originTextRegex.allMatches(aiContent);
+      final originMatches = MarkdownParser.originTextRegex.allMatches(aiContent).toList();
+
       if (originMatches.isEmpty) {
         // 如果没有原文标签，直接添加AI内容
         spans.add(TextSpan(
@@ -62,6 +75,11 @@ class TagStyleRenderer {
         // 如果有原文标签，处理嵌套标签
         int aiContentPosition = 0;
         for (final originMatch in originMatches) {
+          // 验证匹配有效性
+          if (originMatch.start < 0 || originMatch.end > aiContent.length || originMatch.start >= originMatch.end) {
+            continue;
+          }
+
           // 添加原文标签前的AI内容
           if (originMatch.start > aiContentPosition) {
             spans.add(TextSpan(
@@ -91,7 +109,6 @@ class TagStyleRenderer {
 
           aiContentPosition = originMatch.end;
         }
-
         // 添加最后一个原文标签后的AI内容
         if (aiContentPosition < aiContent.length) {
           spans.add(TextSpan(
@@ -100,7 +117,6 @@ class TagStyleRenderer {
           ));
         }
       }
-
       // 添加结束AI标签
       spans.add(TextSpan(
         text: '</ai>',
@@ -109,12 +125,15 @@ class TagStyleRenderer {
 
       currentPosition = aiMatch.end;
     }
-
     // 添加剩余的普通文本
     if (currentPosition < text.length) {
       spans.add(TextSpan(
         text: text.substring(currentPosition),
       ));
+    }
+    // 确保spans不为空，避免渲染问题
+    if (spans.isEmpty) {
+      return const TextSpan(text: '');
     }
 
     return TextSpan(children: spans);

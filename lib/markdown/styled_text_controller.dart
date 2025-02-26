@@ -17,15 +17,15 @@ class StyledTextEditingController extends TextEditingController {
   }) {
     // 使用标签渲染器处理文本
     final TextSpan taggedSpan = TagStyleRenderer.renderTaggedText(text);
-    
+
     // 合并基础样式
     if (style != null) {
       return TextSpan(
         style: style,
+        text: taggedSpan.text, // 添加text属性，确保不丢失文本内容
         children: taggedSpan.children,
       );
     }
-    
     return taggedSpan;
   }
 
@@ -53,7 +53,7 @@ class StyledTextEditingController extends TextEditingController {
         final lineEnd = text.indexOf('\n', currentPosition);
         final endPosition = lineEnd == -1 ? text.length : lineEnd;
         final fullLine = text.substring(lineStart, endPosition);
-        
+
         // 如果行已经被<ai>标签包裹，不做处理
         if (!fullLine.trim().startsWith('<ai>')) {
           final newText = text.replaceRange(
@@ -67,7 +67,7 @@ class StyledTextEditingController extends TextEditingController {
               offset: lineStart + '<ai>${fullLine.trim()}</ai>'.length,
             ),
           );
-          
+
           // 触发AI处理
           onAiProcess?.call();
         }
