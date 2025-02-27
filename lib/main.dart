@@ -545,17 +545,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onPressed: _showModelConfigDialog,
             tooltip: '模型配置',
           ),
+          // AI处理按钮
+          IconButton(
+            icon: const Icon(Icons.play_arrow),
+            onPressed: () {
+              final aiState = Provider.of<AiState>(context, listen: false);
+              if (!aiState.isProcessing) {
+                aiState.processText(_textController.text);
+              }
+            },
+            tooltip: '开始AI处理',
+          ),
           // 切换主题模式
           IconButton(
             icon: Icon(Theme.of(context).brightness == Brightness.light 
                 ? Icons.dark_mode 
                 : Icons.light_mode),
-            onPressed: _showThemeSettingsDialog,
-            tooltip: '主题设置',
-          ),
-          // 添加另一个主题设置按钮
-          IconButton(
-            icon: const Icon(Icons.brightness_6),
             onPressed: _showThemeSettingsDialog,
             tooltip: '主题设置',
           ),
