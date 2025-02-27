@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'markdown_parser.dart';
 import 'styled_text_controller.dart';
+import 'markdown_styled_controller.dart';
 
 /// 标签操作类，提供标签相关的操作功能
 class TagActions {
   /// 插入AI标签
   static void insertAiTag(
     BuildContext context,
-    StyledTextEditingController controller,
+    TextEditingController controller,
     VoidCallback onChanged,
   ) {
     final TextSelection selection = controller.selection;
@@ -44,7 +45,7 @@ class TagActions {
   /// 插入原文标签
   static void insertOriginTextTag(
     BuildContext context,
-    StyledTextEditingController controller,
+    TextEditingController controller,
     VoidCallback onChanged,
   ) {
     final TextSelection selection = controller.selection;
@@ -89,7 +90,7 @@ class TagActions {
   /// 创建标签操作按钮
   static List<Widget> buildTagActionButtons(
     BuildContext context,
-    StyledTextEditingController controller,
+    TextEditingController controller,
     VoidCallback onChanged,
   ) {
     return [

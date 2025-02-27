@@ -7,6 +7,7 @@ import 'file_manager/file_manager.dart';
 import 'markdown/heading_tree.dart';
 import 'markdown/markdown_parser.dart';
 import 'markdown/outline_view.dart';
+import 'markdown/markdown_styled_controller.dart';
 import 'markdown/styled_text_controller.dart';
 import 'markdown/adjust_subheadings_dialog.dart';
 import 'ai/ai_state.dart';
@@ -511,7 +512,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (line >= 0 && line < lines.length) {
       int offset = 0;
       for (int i = 0; i < line; i++) {
-        offset += (lines[i].length + 1).toInt(); // +1 for newline character
+        offset += (lines[i].length + 1); // +1 for newline character
       }
       _textController.selection = TextSelection.fromPosition(
         TextPosition(offset: offset),

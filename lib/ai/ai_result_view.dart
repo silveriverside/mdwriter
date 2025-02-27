@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'ai_block.dart';
 import 'ai_state.dart';
 
@@ -236,7 +237,28 @@ class _AiResultViewState extends State<AiResultView> {
                             height: 1.5,
                           ),
                         )
-                      : Text(block.aiResult!),
+                      : MarkdownBody(
+                          data: block.aiResult!,
+                          selectable: true,
+                          styleSheet: MarkdownStyleSheet(
+                            p: const TextStyle(fontSize: 14.0, height: 1.5),
+                            h1: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+                            h2: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                            h3: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
+                            h4: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.bold),
+                            h5: const TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold),
+                            h6: const TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),
+                            code: const TextStyle(
+                              backgroundColor: Color(0xFFEEEEEE),
+                              fontFamily: 'monospace',
+                              fontSize: 13.0,
+                            ),
+                            blockquote: const TextStyle(
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
                   )
                 else
                   const Center(
