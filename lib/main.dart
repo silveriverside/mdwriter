@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'theme/theme_mode_provider.dart';
 import 'file_manager/recent_files_provider.dart';
 import 'file_manager/file_manager.dart';
 import 'markdown/heading_tree.dart';
@@ -28,11 +29,13 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RecentFilesProvider()),
         ChangeNotifierProvider(create: (_) => ModelConfigProvider()),
         ChangeNotifierProvider(create: (_) => AiState()),
+        ChangeNotifierProvider(create: (_) => ThemeModeProvider()),
       ],
       child: Builder(
         builder: (context) {
           // 初始化时加载模型配置
           final configProvider = Provider.of<ModelConfigProvider>(context, listen: false);
+          final themeProvider = Provider.of<ThemeModeProvider>(context, listen: true);
           final aiState = Provider.of<AiState>(context, listen: false);
 
           configProvider.loadConfig().then((_) {
@@ -44,12 +47,26 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             title: 'MDWriter',
             theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.deepPurple,
+                brightness: Brightness.light,
+              ),
               brightness: Brightness.light,
               primaryColor: Colors.deepPurple,
               primarySwatch: Colors.deepPurple,
               useMaterial3: true,
             ),
+            darkTheme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.deepPurple,
+                brightness: Brightness.dark,
+              ),
+              brightness: Brightness.dark,
+              primaryColor: Colors.deepPurple,
+              primarySwatch: Colors.deepPurple,
+              useMaterial3: true,
+            ),
+            themeMode: themeProvider.themeMode,
             home: const HomePage(title: 'MDWriter'),
           );
         },
@@ -326,6 +343,19 @@ class _HomePageState extends State<HomePage> {
             onPressed: _showModelConfigDialog,
             tooltip: '模型配置',
           ),
+          // 切换主题模式
+          IconButton(
+            icon: Icon(Theme.of(context).brightness == Brightness.light 
+                ? Icons.dark_mode 
+                : Icons.light_mode),
+            onPressed: () {
+              final themeProvider = Provider.of<ThemeModeProvider>(context, listen: false);
+              themeProvider.toggleTheme();
+            },
+            tooltip: Theme.of(context).brightness == Brightness.light 
+                ? '切换到暗黑模式' 
+                : '切换到亮色模式',
+          ),
           // 切换大纲视图
           IconButton(
             icon: Icon(_showOutline ? Icons.view_sidebar : Icons.view_headline),
@@ -434,7 +464,9 @@ class _HomePageState extends State<HomePage> {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Theme.of(context).brightness == Brightness.light 
+                              ? Colors.white 
+                              : Colors.grey[800],
                         ),
                         style: const TextStyle(
                           fontSize: 16.0,
