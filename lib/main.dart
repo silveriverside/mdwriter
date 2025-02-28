@@ -506,6 +506,54 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _updateCurrentLine(newLine);
   }
 
+  // 批量调整子标题级别
+  void _adjustSubheadings(int levelChange) {
+    // 获取当前文本的所有行
+    final lines = _textController.text.split('\n');
+
+    // 确保当前行在有效范围内
+    if (_currentLine < 0 || _currentLine >= lines.length) {
+      return;
+    }
+
+    // 检查当前行是否是标题
+    final currentLevel = MarkdownParser.getHeadingLevel(lines[_currentLine]);
+    if (currentLevel == 0) {
+      // 如果不是标题，显示提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('当前行不是标题，无法调整子标题'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+  
+    // 获取当前标题的子标题块范围
+    final endLine = MarkdownParser.getHeadingBlockRange(lines, _currentLine);
+    if (endLine < _currentLine) {
+      // 如果没有子标题，显示提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('当前标题下没有子标题'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+  
+    // 调用MarkdownParser的方法批量调整子标题
+    final newLines = MarkdownParser.adjustSubheadings(
+      lines, _currentLine, endLine, levelChange);
+
+    // 更新文本内容
+    setState(() {
+      _textController.text = newLines.join('\n');
+      // 重新解析Markdown以更新标题树
+      _parseMarkdown();
+    });
+  }
+
   // 跳转到指定行
   void _jumpToLine(int line) {
     final lines = _textController.text.split('\n');
@@ -585,31 +633,77 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onLineChanged: (String newLine) => _updateCurrentLineText(newLine),
             onPromoteHeading: () {
               setState(() {
-                final newLine = MarkdownParser.promoteHeading(_getCurrentLine());
-                _updateCurrentLineText(newLine);
-                _textController.text = _textController.text.replaceFirst(_getCurrentLine(), newLine);
+                // final newLine = MarkdownParser.promoteHeading(_getCurrentLine());
+                // _updateCurrentLineText(newLine);
+                // _textController.text = _textController.text.replaceFirst(_getCurrentLine(), newLine);
+                // _updateCurrentLineText已经在onLineChanged中被调用，不需要重复
+                // 只需要重新解析Markdown以更新标题树
                 _parseMarkdown(); // 重新解析Markdown以更新标题树
               });
             },
             onDemoteHeading: () {
               setState(() {
-                final newLine = MarkdownParser.demoteHeading(_getCurrentLine());
-                _updateCurrentLineText(newLine);
-                _textController.text = _textController.text.replaceFirst(_getCurrentLine(), newLine);
+                // _updateCurrentLineText已经在onLineChanged中被调用，不需要重复
+                // 只需要重新解析Markdown以更新标题树
+                // final newLine = MarkdownParser.demoteHeading(_getCurrentLine());
+                // _updateCurrentLineText(newLine);
+                // _textController.text = _textController.text.replaceFirst(_getCurrentLine(), newLine);
                 _parseMarkdown(); // 重新解析Markdown以更新标题树
               });
             },
             onToggleHeading: () {
               setState(() {
-                final newLine = MarkdownParser.toggleHeading(_getCurrentLine());
-                _updateCurrentLineText(newLine);
-                _textController.text = _textController.text.replaceFirst(_getCurrentLine(), newLine);
+                // final newLine = MarkdownParser.toggleHeading(_getCurrentLine());
+                // _updateCurrentLineText(newLine);
+                // _textController.text = _textController.text.replaceFirst(_getCurrentLine(), newLine);
                 _parseMarkdown(); // 重新解析Markdown以更新标题树
               });
             },
             onAdjustSubheadings: () {
-              // TODO: 实现批量调整子标题级别的逻辑
-              print('批量调整子标题');
+              // 显示批量调整子标题对话框
+              showDialog(
+                context: context,
+                builder: (context) {
+                  // 定义级别变化变量
+                  int levelChange = 0;
+                  
+                  return AlertDialog(
+                    title: const Text('批量调整子标题级别'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.arrow_upward),
+                          title: const Text('提升一级（减少#号）'),
+                          onTap: () {
+                            levelChange = -1;
+                            Navigator.pop(context, levelChange);
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.arrow_downward),
+                          title: const Text('降低一级（增加#号）'),
+                          onTap: () {
+                            levelChange = 1;
+                            Navigator.pop(context, levelChange);
+                          },
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('取消'),
+                      ),
+                    ],
+                  );
+                },
+              ).then((levelChange) {
+                // 如果用户选择了级别变化
+                if (levelChange != null) {
+                  _adjustSubheadings(levelChange);
+                }
+              });
             },
           ),
           IconButton(
