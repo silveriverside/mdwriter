@@ -25,6 +25,8 @@ class _AiResultViewState extends State<AiResultView> {
   // 存储每个块的编辑状态和编辑器控制器
   final Map<int, bool> _editingStates = {};
   final Map<int, TextEditingController> _editControllers = {};
+  // 存储每个块的原始文本折叠状态
+  final Map<int, bool> _collapsedStates = {};
 
   @override
   void dispose() {
@@ -190,6 +192,7 @@ class _AiResultViewState extends State<AiResultView> {
               ],
             ),
           ),
+
           // 原文（如果有）
           if (block.originalContent != null)
             Padding(
@@ -197,18 +200,46 @@ class _AiResultViewState extends State<AiResultView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '原文:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Text(
+                        '原文:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      // 添加展开/折叠按钮
+                      TextButton.icon(
+                        icon: Icon(
+                          (_collapsedStates[index] ?? true) 
+                              ? Icons.expand_more 
+                              : Icons.expand_less
+                        ),
+                        label: Text(
+                          (_collapsedStates[index] ?? true) ? '展开' : '折叠'
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            // 切换折叠状态
+                            _collapsedStates[index] = !(_collapsedStates[index] ?? true);
+                          });
+                        },
+                      ),
+                    ],
                   ),
                   Container(
                     padding: const EdgeInsets.all(8.0),
                     color: Colors.grey.withOpacity(0.1),
-                    child: Text(block.originalContent!),
+                    child: Text(
+                      // 根据折叠状态显示部分或全部内容
+                      (_collapsedStates[index] ?? true)
+                          ? _getFirstLineWithEllipsis(block.originalContent!)
+                          : block.originalContent!,
+                    ),
                   ),
                 ],
               ),
             ),
+
           // AI 结果
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -273,5 +304,13 @@ class _AiResultViewState extends State<AiResultView> {
         ],
       ),
     );
+  }
+
+  // 获取文本的第一行并添加省略号（如果需要）
+  String _getFirstLineWithEllipsis(String text) {
+    if (!text.contains('\n')) return text;
+    
+    final firstLine = text.split('\n').first;
+    return '$firstLine${text.length > firstLine.length ? '...' : ''}';
   }
 }
