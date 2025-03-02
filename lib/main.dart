@@ -16,6 +16,7 @@ import 'ai/model_config.dart';
 import 'markdown/heading_actions.dart';
 import 'markdown/tag_actions.dart';
 import 'ai/model_config_dialog.dart';
+import 'utils/word_counter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -114,6 +115,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _hasUnsavedChanges = false;
   // 上次保存的内容
   String _lastSavedContent = '';
+  // 字数统计信息
+  String _wordCountInfo = "0 字";
   @override
   void initState() {
     // 添加应用生命周期观察者
@@ -129,6 +132,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       },
     );
     _textController.addListener(_onTextChanged);
+    
+    // 初始化字数统计
+    _updateWordCount();
   }
 
   @override
@@ -144,6 +150,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _parseMarkdown();
     // 更新当前行
     _updateCurrentLineFromCursor();
+    // 更新字数统计
+    _updateWordCount();
     // 检查是否有未保存的更改
     setState(() {
       _hasUnsavedChanges = _textController.text != _lastSavedContent;
@@ -157,6 +165,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       setState(() {
         _currentLine = 0;
       });
+      _updateWordCount(); // 更新字数统计
       return;
     }
     final selection = _textController.selection;
@@ -168,6 +177,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     setState(() {
       _currentLine = linesBefore;
     });
+    _updateWordCount(); // 更新字数统计
   }
 
   // 获取当前行文本
@@ -535,6 +545,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return false;
   }
 
+  // 更新字数统计的方法
+  void _updateWordCount() {
+    if (!mounted) return;
+    
+    final text = _textController.text;
+    final cursorPosition = _textController.selection.baseOffset;
+    
+    if (cursorPosition >= 0) {
+      final totalWords = WordCounter.countWords(text);
+      final sectionWords = WordCounter.countSectionWords(text, cursorPosition);
+      
+      setState(() {
+        // 如果总字数和段落字数不同，说明光标在标题上
+        if (totalWords != sectionWords) {
+          _wordCountInfo = "当前段落: $sectionWords 字 / 总计: $totalWords 字";
+        } else {
+          _wordCountInfo = "总计: $totalWords 字";
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final aiState = Provider.of<AiState>(context);
@@ -763,30 +795,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ],
             ),
           ),
-          if (_currentFilePath.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '当前文件: $_currentFilePath',
-                      style: const TextStyle(fontSize: 12.0),
-                      overflow: TextOverflow.ellipsis,
+          Container(
+            padding: const EdgeInsets.all(8.0),
+            color: Theme.of(context).colorScheme.surfaceVariant,
+            height: 30.0,
+            child: Row(
+              children: [
+                // 字数统计信息
+                Text(
+                  _wordCountInfo,
+                  style: TextStyle(
+                    fontSize: 12.0,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // 文件路径
+                Expanded(
+                  child: Text(
+                    _currentFilePath.isEmpty ? "未打开文件" : "当前文件: $_currentFilePath",
+                    style: TextStyle(
+                      fontSize: 12.0,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // 未保存标记
+                if (_hasUnsavedChanges)
+                  Text(
+                    "(未保存)",
+                    style: TextStyle(
+                      fontSize: 12.0,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.red[300]
+                          : Colors.red,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (_hasUnsavedChanges)
-                    const Text(
-                      '(未保存)',
-                      style: TextStyle(
-                        fontSize: 12.0,
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );
