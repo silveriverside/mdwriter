@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'resizable_panel_divider.dart';
 
 class ResizablePanelLayout extends StatefulWidget {
@@ -43,82 +44,129 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
   late double _leftPanelWidth;
   late double _middlePanelWidth;
   late double _rightPanelWidth;
-  double _totalWidth = 0; // 初始化为0，而不是使用late
-  bool _isInitialized = false; // 添加初始化标志
+  double _totalWidth = 0;
+  bool _isInitialized = false;
+  bool? _previousShowLeftPanel;
+  bool? _previousShowRightPanel;
   
   // 计算初始宽度
   void _calculateInitialWidths(double totalWidth) {
-    if (_isInitialized && _totalWidth > 0) {
-      // 如果已经初始化过并且总宽度不变，则不重新计算
-      if (_totalWidth == totalWidth) return;
+    bool needsRecalculation = !_isInitialized || 
+                            _totalWidth != totalWidth ||
+                            _previousShowLeftPanel != widget.showLeftPanel ||
+                            _previousShowRightPanel != widget.showRightPanel;
+    
+    if (!needsRecalculation) return;
+    
+    // 如果面板显示状态发生变化，重新分配空间
+    if (_isInitialized) {
+      if (!widget.showLeftPanel && _previousShowLeftPanel == true) {
+        // 左面板被隐藏，将其宽度分配给中间面板
+        _middlePanelWidth += _leftPanelWidth;
+        _leftPanelWidth = 0;
+      } else if (widget.showLeftPanel && _previousShowLeftPanel == false) {
+        // 左面板从隐藏变为显示，从中间面板分配空间
+        double newLeftWidth = _totalWidth * widget.initialLeftPanelWeight;
+        if (newLeftWidth > _middlePanelWidth * 0.7) {
+          newLeftWidth = _middlePanelWidth * 0.7;
+        }
+        _leftPanelWidth = newLeftWidth;
+        _middlePanelWidth -= newLeftWidth;
+      }
       
-      // 如果总宽度改变，按比例调整各个面板的宽度
+      if (!widget.showRightPanel && _previousShowRightPanel == true) {
+        // 右面板被隐藏，将其宽度分配给中间面板
+        _middlePanelWidth += _rightPanelWidth;
+        _rightPanelWidth = 0;
+      } else if (widget.showRightPanel && _previousShowRightPanel == false) {
+        // 右面板从隐藏变为显示，从中间面板分配空间
+        double newRightWidth = _totalWidth * widget.initialRightPanelWeight;
+        if (newRightWidth > _middlePanelWidth * 0.7) {
+          newRightWidth = _middlePanelWidth * 0.7;
+        }
+        _rightPanelWidth = newRightWidth;
+        _middlePanelWidth -= newRightWidth;
+      }
+    }
+    
+    // 保存当前的显示状态 - 确保在处理完可见性变化后更新
+    _previousShowLeftPanel = widget.showLeftPanel;
+    _previousShowRightPanel = widget.showRightPanel;
+    
+    _totalWidth = totalWidth;
+    
+    if (!_isInitialized) {
+      // 首次初始化
+      if (widget.savedLeftPanelWidth != null && 
+          widget.savedMiddlePanelWidth != null && 
+          widget.savedRightPanelWidth != null) {
+        _leftPanelWidth = widget.showLeftPanel ? widget.savedLeftPanelWidth! : 0;
+        _middlePanelWidth = widget.savedMiddlePanelWidth!;
+        _rightPanelWidth = widget.showRightPanel ? widget.savedRightPanelWidth! : 0;
+        
+        // 如果面板被隐藏，将其宽度分配给中间面板
+        if (!widget.showLeftPanel) {
+          _middlePanelWidth += _leftPanelWidth;
+          _leftPanelWidth = 0;
+        }
+        if (!widget.showRightPanel) {
+          _middlePanelWidth += _rightPanelWidth;
+          _rightPanelWidth = 0;
+        }
+      } else {
+        // 使用默认权重
+        _initializeWithDefaultWeights(totalWidth);
+      }
+    } else if (_totalWidth != totalWidth) {
+      // 窗口大小改变，按比例调整
       double ratio = totalWidth / _totalWidth;
       _leftPanelWidth *= ratio;
       _middlePanelWidth *= ratio;
       _rightPanelWidth *= ratio;
-      _totalWidth = totalWidth;
-      _applyMinWidthLimits();
-      return;
     }
     
-    _totalWidth = totalWidth;
+    _applyMinWidthLimits();
     _isInitialized = true;
     
-    // 优先使用保存的宽度
-    if (widget.savedLeftPanelWidth != null && 
-        widget.savedMiddlePanelWidth != null && 
-        widget.savedRightPanelWidth != null) {
-      _leftPanelWidth = widget.showLeftPanel ? widget.savedLeftPanelWidth! : 0;
-      _middlePanelWidth = widget.savedMiddlePanelWidth!;
-      _rightPanelWidth = widget.showRightPanel ? widget.savedRightPanelWidth! : 0;
-      
-      // 根据可见性调整宽度
-      if (!widget.showLeftPanel) {
-        _middlePanelWidth = _middlePanelWidth + _leftPanelWidth;
-        _leftPanelWidth = 0;
+    // 通知布局变化
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (widget.onLayoutChanged != null) {
+        widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
       }
-      
-      if (!widget.showRightPanel) {
-        _middlePanelWidth = _middlePanelWidth + _rightPanelWidth;
-        _rightPanelWidth = 0;
-      }
-      
-      // 确保宽度总和不超过总宽度
-      double totalPanelWidth = _leftPanelWidth + _middlePanelWidth + _rightPanelWidth;
-      if (totalPanelWidth > totalWidth) {
-        double ratio = totalWidth / totalPanelWidth;
-        _leftPanelWidth *= ratio;
-        _middlePanelWidth *= ratio;
-        _rightPanelWidth *= ratio;
-      }
+    });
+  }
+  
+  // 使用默认权重初始化
+  void _initializeWithDefaultWeights(double totalWidth) {
+    double dividerWidth = (widget.showLeftPanel ? 8.0 : 0.0) + (widget.showRightPanel ? 8.0 : 0.0);
+    double availableWidth = totalWidth - dividerWidth;
+    
+    if (widget.showLeftPanel && widget.showRightPanel) {
+      // 两个面板都显示
+      _leftPanelWidth = availableWidth * widget.initialLeftPanelWeight;
+      _rightPanelWidth = availableWidth * widget.initialRightPanelWeight;
+      _middlePanelWidth = availableWidth - _leftPanelWidth - _rightPanelWidth;
+    } else if (widget.showLeftPanel) {
+      // 只显示左侧面板
+      _leftPanelWidth = availableWidth * widget.initialLeftPanelWeight;
+      _middlePanelWidth = availableWidth - _leftPanelWidth;
+      _rightPanelWidth = 0;
+    } else if (widget.showRightPanel) {
+      // 只显示右侧面板
+      _rightPanelWidth = availableWidth * widget.initialRightPanelWeight;
+      _middlePanelWidth = availableWidth - _rightPanelWidth;
+      _leftPanelWidth = 0;
     } else {
-      // 使用权重计算宽度
-      if (widget.showLeftPanel && widget.showRightPanel) {
-        // 所有面板都显示
-        _leftPanelWidth = totalWidth * widget.initialLeftPanelWeight;
-        _rightPanelWidth = totalWidth * widget.initialRightPanelWeight;
-        _middlePanelWidth = totalWidth - _leftPanelWidth - _rightPanelWidth - 16.0; // 减去两个分隔线的宽度
-      } else if (widget.showLeftPanel) {
-        // 只显示左侧和中间面板
-        _leftPanelWidth = totalWidth * widget.initialLeftPanelWeight;
-        _middlePanelWidth = totalWidth - _leftPanelWidth - 8.0; // 减去一个分隔线的宽度
-        _rightPanelWidth = 0;
-      } else if (widget.showRightPanel) {
-        // 只显示中间和右侧面板
-        _rightPanelWidth = totalWidth * widget.initialRightPanelWeight;
-        _middlePanelWidth = totalWidth - _rightPanelWidth - 8.0; // 减去一个分隔线的宽度
-        _leftPanelWidth = 0;
-      } else {
-        // 只显示中间面板
-        _middlePanelWidth = totalWidth;
-        _leftPanelWidth = 0;
-        _rightPanelWidth = 0;
-      }
+      // 只显示中间面板
+      _middlePanelWidth = availableWidth;
+      _leftPanelWidth = 0;
+      _rightPanelWidth = 0;
     }
     
-    // 确保最小宽度限制
-    _applyMinWidthLimits();
+    // 确保所有宽度都是大于等于0的，避免负值导致布局错误
+    _leftPanelWidth = _leftPanelWidth.isNegative ? 0 : _leftPanelWidth;
+    _middlePanelWidth = _middlePanelWidth.isNegative ? 0 : _middlePanelWidth;
+    _rightPanelWidth = _rightPanelWidth.isNegative ? 0 : _rightPanelWidth;
   }
   
   // 应用最小宽度限制
@@ -156,117 +204,30 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
     }
   }
   
-  // 处理左侧分隔线拖动
-  void _handleLeftDividerDrag(double delta) {
-    if (delta == 0) return; // 忽略无变化的拖动
-    
-    setState(() {
-      // 计算新的面板宽度
-      double newLeftWidth = _leftPanelWidth + delta;
-      double newMiddleWidth = _middlePanelWidth - delta;
-      
-      // 限制最小宽度
-      if (newLeftWidth < widget.minLeftPanelWidth) {
-        newLeftWidth = widget.minLeftPanelWidth;
-        newMiddleWidth = _middlePanelWidth - (newLeftWidth - _leftPanelWidth);
-      }
-      
-      if (newMiddleWidth < widget.minMiddlePanelWidth) {
-        newMiddleWidth = widget.minMiddlePanelWidth;
-        newLeftWidth = _leftPanelWidth + (_middlePanelWidth - newMiddleWidth);
-      }
-      
-      // 限制最大宽度 (不超过总宽度的70%)
-      double maxLeftWidth = _totalWidth * 0.7;
-      double maxMiddleWidth = _totalWidth * 0.8;
-      
-      if (newLeftWidth > maxLeftWidth) {
-        newLeftWidth = maxLeftWidth;
-        newMiddleWidth = _middlePanelWidth - (newLeftWidth - _leftPanelWidth);
-      }
-      
-      if (newMiddleWidth > maxMiddleWidth) {
-        newMiddleWidth = maxMiddleWidth;
-        newLeftWidth = _leftPanelWidth + (_middlePanelWidth - newMiddleWidth);
-      }
-      
-      // 应用新的宽度
-      _leftPanelWidth = newLeftWidth;
-      _middlePanelWidth = newMiddleWidth;
-      
-      // 通知布局变化
-      if (widget.onLayoutChanged != null) {
-        widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
-      }
-    });
-  }
-  
-  // 处理右侧分隔线拖动
-  void _handleRightDividerDrag(double delta) {
-    if (delta == 0) return; // 忽略无变化的拖动
-    
-    setState(() {
-      // 计算新的面板宽度
-      double newMiddleWidth = _middlePanelWidth + delta;
-      double newRightWidth = _rightPanelWidth - delta;
-      
-      // 限制最小宽度
-      if (newMiddleWidth < widget.minMiddlePanelWidth) {
-        newMiddleWidth = widget.minMiddlePanelWidth;
-        newRightWidth = _rightPanelWidth - (newMiddleWidth - _middlePanelWidth);
-      }
-      
-      if (newRightWidth < widget.minRightPanelWidth) {
-        newRightWidth = widget.minRightPanelWidth;
-        newMiddleWidth = _middlePanelWidth + (_rightPanelWidth - newRightWidth);
-      }
-      
-      // 限制最大宽度 (不超过总宽度的70%)
-      double maxMiddleWidth = _totalWidth * 0.8;
-      double maxRightWidth = _totalWidth * 0.7;
-      
-      if (newMiddleWidth > maxMiddleWidth) {
-        newMiddleWidth = maxMiddleWidth;
-        newRightWidth = _rightPanelWidth - (newMiddleWidth - _middlePanelWidth);
-      }
-      
-      if (newRightWidth > maxRightWidth) {
-        newRightWidth = maxRightWidth;
-        newMiddleWidth = _middlePanelWidth + (_rightPanelWidth - newRightWidth);
-      }
-      
-      // 应用新的宽度
-      _middlePanelWidth = newMiddleWidth;
-      _rightPanelWidth = newRightWidth;
-      
-      // 通知布局变化
-      if (widget.onLayoutChanged != null) {
-        widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
-      }
-    });
-  }
-  
   // 重置面板布局
   void _resetLayout() {
     setState(() {
-      // 重置初始化标志
+      // 重置初始化标志，强制重新计算
       _isInitialized = false;
       
-      // 使用默认权重计算新的宽度
+      // 重新计算面板宽度
+      double dividerWidth = (widget.showLeftPanel ? 8.0 : 0.0) + (widget.showRightPanel ? 8.0 : 0.0);
+      double availableWidth = _totalWidth - dividerWidth;
+      
       if (widget.showLeftPanel && widget.showRightPanel) {
-        _leftPanelWidth = _totalWidth * widget.initialLeftPanelWeight;
-        _rightPanelWidth = _totalWidth * widget.initialRightPanelWeight;
-        _middlePanelWidth = _totalWidth - _leftPanelWidth - _rightPanelWidth - 16.0;
+        _leftPanelWidth = availableWidth * widget.initialLeftPanelWeight;
+        _rightPanelWidth = availableWidth * widget.initialRightPanelWeight;
+        _middlePanelWidth = availableWidth - _leftPanelWidth - _rightPanelWidth;
       } else if (widget.showLeftPanel) {
-        _leftPanelWidth = _totalWidth * widget.initialLeftPanelWeight;
-        _middlePanelWidth = _totalWidth - _leftPanelWidth - 8.0;
+        _leftPanelWidth = availableWidth * widget.initialLeftPanelWeight;
+        _middlePanelWidth = availableWidth - _leftPanelWidth;
         _rightPanelWidth = 0;
       } else if (widget.showRightPanel) {
-        _rightPanelWidth = _totalWidth * widget.initialRightPanelWeight;
-        _middlePanelWidth = _totalWidth - _rightPanelWidth - 8.0;
+        _rightPanelWidth = availableWidth * widget.initialRightPanelWeight;
+        _middlePanelWidth = availableWidth - _rightPanelWidth;
         _leftPanelWidth = 0;
       } else {
-        _middlePanelWidth = _totalWidth;
+        _middlePanelWidth = availableWidth;
         _leftPanelWidth = 0;
         _rightPanelWidth = 0;
       }
@@ -278,9 +239,11 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
       _isInitialized = true;
       
       // 通知布局变化
-      if (widget.onLayoutChanged != null) {
-        widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
-      }
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (widget.onLayoutChanged != null) {
+          widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
+        }
+      });
     });
   }
   
@@ -291,6 +254,7 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
         // 初始化或窗口大小变化时计算宽度
         _calculateInitialWidths(constraints.maxWidth);
         
+        // 创建实际的布局
         return Row(
           children: [
             // 左侧面板
@@ -300,12 +264,16 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
                 child: widget.leftPanel,
               ),
               ResizablePanelDivider(
-                onDrag: _handleLeftDividerDrag,
+                onDrag: (delta) {
+                  if (delta == 0) return;
+                  _handleLeftDividerDrag(delta);
+                  setState(() {});
+                },
                 onDoubleTap: _resetLayout,
               ),
             ],
             
-            // 中间面板
+            // 中间面板 - 始终显示，宽度根据可见的面板动态调整
             SizedBox(
               width: _middlePanelWidth,
               child: widget.middlePanel,
@@ -314,7 +282,11 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
             // 右侧面板
             if (widget.showRightPanel) ...[
               ResizablePanelDivider(
-                onDrag: _handleRightDividerDrag,
+                onDrag: (delta) {
+                  if (delta == 0) return;
+                  _handleRightDividerDrag(delta);
+                  setState(() {});
+                },
                 onDoubleTap: _resetLayout,
               ),
               SizedBox(
@@ -326,5 +298,91 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
         );
       },
     );
+  }
+
+  // 处理左侧分隔线拖动
+  void _handleLeftDividerDrag(double delta) {
+    // 计算新的面板宽度
+    double newLeftWidth = _leftPanelWidth + delta;
+    double newMiddleWidth = _middlePanelWidth - delta;
+    
+    // 限制最小宽度
+    if (newLeftWidth < widget.minLeftPanelWidth) {
+      newLeftWidth = widget.minLeftPanelWidth;
+      newMiddleWidth = _middlePanelWidth - (newLeftWidth - _leftPanelWidth);
+    }
+    
+    if (newMiddleWidth < widget.minMiddlePanelWidth) {
+      newMiddleWidth = widget.minMiddlePanelWidth;
+      newLeftWidth = _leftPanelWidth + (_middlePanelWidth - newMiddleWidth);
+    }
+    
+    // 限制最大宽度 (不超过总宽度的70%)
+    double maxLeftWidth = _totalWidth * 0.7;
+    double maxMiddleWidth = _totalWidth * 0.8;
+    
+    if (newLeftWidth > maxLeftWidth) {
+      newLeftWidth = maxLeftWidth;
+      newMiddleWidth = _middlePanelWidth - (newLeftWidth - _leftPanelWidth);
+    }
+    
+    if (newMiddleWidth > maxMiddleWidth) {
+      newMiddleWidth = maxMiddleWidth;
+      newLeftWidth = _leftPanelWidth + (_middlePanelWidth - newMiddleWidth);
+    }
+    
+    // 应用新的宽度
+    _leftPanelWidth = newLeftWidth;
+    _middlePanelWidth = newMiddleWidth;
+    
+    // 通知布局变化
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (widget.onLayoutChanged != null) {
+        widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
+      }
+    });
+  }
+
+  // 处理右侧分隔线拖动
+  void _handleRightDividerDrag(double delta) {
+    // 计算新的面板宽度
+    double newMiddleWidth = _middlePanelWidth + delta;
+    double newRightWidth = _rightPanelWidth - delta;
+    
+    // 限制最小宽度
+    if (newMiddleWidth < widget.minMiddlePanelWidth) {
+      newMiddleWidth = widget.minMiddlePanelWidth;
+      newRightWidth = _rightPanelWidth - (newMiddleWidth - _middlePanelWidth);
+    }
+    
+    if (newRightWidth < widget.minRightPanelWidth) {
+      newRightWidth = widget.minRightPanelWidth;
+      newMiddleWidth = _middlePanelWidth + (_rightPanelWidth - newRightWidth);
+    }
+    
+    // 限制最大宽度 (不超过总宽度的70%)
+    double maxMiddleWidth = _totalWidth * 0.8;
+    double maxRightWidth = _totalWidth * 0.7;
+    
+    if (newMiddleWidth > maxMiddleWidth) {
+      newMiddleWidth = maxMiddleWidth;
+      newRightWidth = _rightPanelWidth - (newMiddleWidth - _middlePanelWidth);
+    }
+    
+    if (newRightWidth > maxRightWidth) {
+      newRightWidth = maxRightWidth;
+      newMiddleWidth = _middlePanelWidth + (_rightPanelWidth - newRightWidth);
+    }
+    
+    // 应用新的宽度
+    _middlePanelWidth = newMiddleWidth;
+    _rightPanelWidth = newRightWidth;
+    
+    // 通知布局变化
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (widget.onLayoutChanged != null) {
+        widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
+      }
+    });
   }
 } 

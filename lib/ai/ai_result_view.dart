@@ -75,53 +75,90 @@ class _AiResultViewState extends State<AiResultView> {
               ],
             ),
           ),
-          // 错误信息显示
-          if (aiState.error != null)
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              margin: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                color: isDark 
-                    ? const Color(0xFF330000).withOpacity(0.3) // 暗红色，无蓝色
-                    : Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(
-                  color: isDark 
-                      ? const Color(0xFF550000).withOpacity(0.3) // 暗红色边框，无蓝色
-                      : Colors.red.withOpacity(0.3),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // 内容区域
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.error_outline, 
-                    color: isDark ? const Color(0xFFFF3300) : Colors.red,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      aiState.error!,
-                      style: TextStyle(
-                        color: isDark ? const Color(0xFFFF3300) : Colors.red,
-                        fontSize: 14,
+                  // 错误信息显示
+                  if (aiState.error != null)
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      margin: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: isDark 
+                            ? const Color(0xFF330000).withOpacity(0.3)
+                            : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8.0),
+                        border: Border.all(
+                          color: isDark 
+                              ? const Color(0xFF550000).withOpacity(0.3)
+                              : Colors.red.withOpacity(0.3),
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 3,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.error_outline, 
+                            color: isDark ? const Color(0xFFFF3300) : Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              aiState.error!,
+                              style: TextStyle(
+                                color: isDark ? const Color(0xFFFF3300) : Colors.red,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  // AI 块列表
+                  if (widget.blocks.isNotEmpty)
+                    ...widget.blocks.asMap().entries.map((entry) {
+                      return _buildResultCard(context, entry.value, entry.key);
+                    }).toList(),
+                  // 空状态提示
+                  if (widget.blocks.isEmpty && aiState.error == null)
+                    Container(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '暂无 AI 处理结果',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '使用 <ai></ai> 标签标记需要处理的内容',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
-            ),
-          // 结果列表
-          Expanded(
-            child: ListView.builder(
-              itemCount: widget.blocks.length,
-              itemBuilder: (context, index) {
-                final block = widget.blocks[index];
-                return _buildResultCard(context, block, index);
-              },
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'theme/theme_mode_provider.dart';
 import 'file_manager/recent_files_provider.dart';
@@ -580,16 +581,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void _savePanelLayout(double leftWidth, double middleWidth, double rightWidth) {
     print('保存面板布局: 左 $leftWidth, 中 $middleWidth, 右 $rightWidth');
     
-    setState(() {
-      _savedLeftPanelWidth = leftWidth;
-      _savedMiddlePanelWidth = middleWidth;
-      _savedRightPanelWidth = rightWidth;
-    });
+    // 直接更新变量，不使用 setState
+    _savedLeftPanelWidth = leftWidth;
+    _savedMiddlePanelWidth = middleWidth;
+    _savedRightPanelWidth = rightWidth;
     
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setDouble('leftPanelWidth', leftWidth);
-      prefs.setDouble('middlePanelWidth', middleWidth);
-      prefs.setDouble('rightPanelWidth', rightWidth);
+    // 异步保存到 SharedPreferences
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setDouble('leftPanelWidth', leftWidth);
+        prefs.setDouble('middlePanelWidth', middleWidth);
+        prefs.setDouble('rightPanelWidth', rightWidth);
+      });
     });
   }
 
@@ -657,7 +660,33 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           IconButton(
             icon: Icon(_showAiResultView ? Icons.visibility : Icons.visibility_off),
             tooltip: _showAiResultView ? '隐藏AI结果视图' : '显示AI结果视图',
-            onPressed: () => setState(() => _showAiResultView = !_showAiResultView),
+            onPressed: () {
+              SchedulerBinding.instance.addPostFrameCallback((_) {
+                setState(() {
+                  _showAiResultView = !_showAiResultView;
+                  // 清除保存的面板宽度，确保在切换可见性时能够重新计算布局
+                  if (!_showAiResultView) {
+                    // 如果隐藏右侧面板，将右侧面板的宽度记录下来，但不用于计算
+                    // 这样当再次显示时可以恢复原来的宽度
+                    SharedPreferences.getInstance().then((prefs) {
+                      if (_savedRightPanelWidth != null) {
+                        prefs.setDouble('savedRightPanelWidth', _savedRightPanelWidth!);
+                      }
+                    });
+                  } else {
+                    // 如果显示右侧面板，尝试恢复之前的宽度
+                    SharedPreferences.getInstance().then((prefs) {
+                      double? rightWidth = prefs.getDouble('savedRightPanelWidth');
+                      if (rightWidth != null) {
+                        setState(() {
+                          _savedRightPanelWidth = rightWidth;
+                        });
+                      }
+                    });
+                  }
+                });
+              });
+            },
           ),
           // 标题操作按钮
           HeadingActions(
@@ -768,7 +797,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           Expanded(
             child: ResizablePanelLayout(
               showLeftPanel: _showOutline,
-              showRightPanel: _showAiResultView && aiState.blocks.isNotEmpty,
+              showRightPanel: _showAiResultView,
               initialLeftPanelWeight: 0.2,
               initialRightPanelWeight: 0.4,
               minLeftPanelWidth: 150.0,
