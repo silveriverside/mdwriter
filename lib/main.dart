@@ -15,6 +15,7 @@ import 'ai/ai_result_view.dart';
 import 'ai/model_config.dart';
 import 'markdown/heading_actions.dart';
 import 'markdown/tag_actions.dart';
+import 'ai/model_config_dialog.dart';
 
 void main() {
   runApp(const MyApp());
@@ -56,6 +57,7 @@ class MyApp extends StatelessWidget {
               primaryColor: Colors.deepPurple,
               primarySwatch: Colors.deepPurple,
               useMaterial3: true,
+              fontFamily: 'FangSong',
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
@@ -66,6 +68,7 @@ class MyApp extends StatelessWidget {
               primaryColor: Colors.deepPurple,
               primarySwatch: Colors.deepPurple,
               useMaterial3: true,
+              fontFamily: 'FangSong',
             ),
             themeMode: themeProvider.themeMode,
             home: const HomePage(title: 'MDWriter'),
@@ -244,68 +247,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void _showModelConfigDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false, // 防止点击外部关闭对话框
       builder: (context) {
-        final configProvider = Provider.of<ModelConfigProvider>(context, listen: false);
-        final currentConfig = configProvider.config;
-        final baseUrlController = TextEditingController(
-          text: currentConfig?.baseUrl ?? '',
-        );
-        final apiKeyController = TextEditingController(
-          text: currentConfig?.apiKey ?? '',
-        );
-        final modelController = TextEditingController(
-          text: currentConfig?.model ?? '',
-        );
-        return AlertDialog(
-          title: const Text('模型配置'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: baseUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Base URL',
-                  hintText: 'https://api.example.com/v1',
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: apiKeyController,
-                decoration: const InputDecoration(
-                  labelText: 'API Key',
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: modelController,
-                decoration: const InputDecoration(
-                  labelText: 'Model',
-                  hintText: 'gpt-3.5-turbo',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: const Text('取消'),
-              onPressed: () => Navigator.pop(context),
-            ),
-            TextButton(
-              child: const Text('保存'),
-              onPressed: () {
-                final config = ModelConfig(
-                  baseUrl: baseUrlController.text,
-                  apiKey: apiKeyController.text,
-                  model: modelController.text,
-                );
-                configProvider.saveConfig(config);
-                // 保存配置后立即更新AI状态
-                Provider.of<AiState>(context, listen: false).setModelConfig(config);
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        return ModelConfigDialogWidget(
+          configProvider: Provider.of<ModelConfigProvider>(context, listen: false),
+          aiState: Provider.of<AiState>(context, listen: false),
         );
       },
     );

@@ -17,6 +17,10 @@ class AiState extends ChangeNotifier {
   /// 错误信息
   String? _error;
 
+  /// 添加模型配置属性
+  ModelConfig? _modelConfig;
+  ModelConfig? get modelConfig => _modelConfig;
+
   /// 获取当前的 AI 块列表
   List<AiBlock> get blocks => _blocks;
 
@@ -28,6 +32,7 @@ class AiState extends ChangeNotifier {
 
   /// 设置模型配置
   void setModelConfig(ModelConfig config) {
+    _modelConfig = config;
     _engine.setConfig(config);
     _error = null;
     notifyListeners();
