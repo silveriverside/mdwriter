@@ -187,34 +187,34 @@ class MarkdownParser {
 
   /// 在选中文本两侧插入AI标签
   static String insertAiTagAroundSelection(String text, int start, int end) {
-    if (start < 0 || end > text.length || start >= end) {
-      return text;
-    }
-    return '${text.substring(0, start)}<ai>${text.substring(start, end)}</ai>${text.substring(end)}';
+    return text.substring(0, start) +
+        '<ai>' +
+        text.substring(start, end) +
+        '</ai>' +
+        text.substring(end);
   }
 
   /// 在光标位置插入AI标签对
   static String insertAiTagAtCursor(String text, int cursorPosition) {
-    if (cursorPosition < 0 || cursorPosition > text.length) {
-      return text;
-    }
-    return '${text.substring(0, cursorPosition)}<ai></ai>${text.substring(cursorPosition)}';
+    return text.substring(0, cursorPosition) +
+        '<ai></ai>' +
+        text.substring(cursorPosition);
   }
 
-  /// 在选中文本外包裹AI和原文标签
+  /// 用AI标签和原文标签包装选中文本
   static String wrapWithAiAndOriginTextTag(String text, int start, int end) {
-    if (start < 0 || end > text.length || start >= end) {
-      return text;
-    }
-    return '${text.substring(0, start)}<ai><origintext>${text.substring(start, end)}</origintext></ai>${text.substring(end)}';
+    return text.substring(0, start) +
+        '<ai><origintext>' +
+        text.substring(start, end) +
+        '</origintext></ai>' +
+        text.substring(end);
   }
 
   /// 在光标位置插入原文标签对
   static String insertOriginTextTagAtCursor(String text, int cursorPosition) {
-    if (cursorPosition < 0 || cursorPosition > text.length) {
-      return text;
-    }
-    return '${text.substring(0, cursorPosition)}<origintext></origintext>${text.substring(cursorPosition)}';
+    return text.substring(0, cursorPosition) +
+        '<origintext></origintext>' +
+        text.substring(cursorPosition);
   }
 
   /// 检查文本是否包含AI标签
@@ -243,5 +243,13 @@ class MarkdownParser {
       ranges.add((start: match.start, end: match.end));
     }
     return ranges;
+  }
+
+  static String _addOriginTextTagToSelection(String text, int selectionStart, int selectionEnd) {
+    return text.substring(0, selectionStart) + 
+           '<origintext>' + 
+           text.substring(selectionStart, selectionEnd) + 
+           '</origintext>' + 
+           text.substring(selectionEnd);
   }
 }
