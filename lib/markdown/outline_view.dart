@@ -16,36 +16,74 @@ class OutlineView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 获取当前主题
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // 背景颜色 - 如果是暗色模式则使用主题的surface色调
+    final backgroundColor = isDark 
+        ? theme.colorScheme.surface 
+        : Colors.grey[200];
+    final textColor = theme.textTheme.bodyMedium?.color;
+    
+    // 高亮颜色 - 暗色模式下使用主色调的暗变体，不含蓝色
+    final highlightColor = isDark
+        ? theme.colorScheme.primaryContainer.withOpacity(0.4)
+        : Colors.blue.withOpacity(0.2);
+    
     return Container(
-      color: Colors.grey[200],
-      child: ListView.builder(
-        padding: const EdgeInsets.all(8.0),
-        itemCount: headingTree.allNodes.length,
-        itemBuilder: (context, index) {
-          final node = headingTree.allNodes[index];
-          return InkWell(
-            onTap: () => onHeadingTap(node.lineNumber),
-            child: Container(
-              padding: EdgeInsets.only(
-                left: (node.level - 1) * 16.0 + 8.0,
-                top: 4.0,
-                bottom: 4.0,
-              ),
-              color: node.lineNumber == currentLine
-                  ? Colors.blue.withOpacity(0.2)
-                  : null,
-              child: Text(
-                node.text,
-                style: TextStyle(
-                  fontSize: 14.0,
-                  fontWeight: node.lineNumber == currentLine
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                ),
+      color: backgroundColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 添加标题
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Text(
+              '大纲视图',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: textColor,
+                fontFamily: 'FangSong',
               ),
             ),
-          );
-        },
+          ),
+          // 添加分隔线
+          Divider(color: theme.dividerColor),
+          // 大纲内容
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8.0),
+              itemCount: headingTree.allNodes.length,
+              itemBuilder: (context, index) {
+                final node = headingTree.allNodes[index];
+                final isSelected = node.lineNumber == currentLine;
+                
+                return InkWell(
+                  onTap: () => onHeadingTap(node.lineNumber),
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      left: (node.level - 1) * 16.0 + 8.0,
+                      top: 4.0,
+                      bottom: 4.0,
+                    ),
+                    color: isSelected ? highlightColor : null,
+                    child: Text(
+                      node.text,
+                      style: TextStyle(
+                        fontSize: 14.0,
+                        color: textColor,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -88,7 +126,9 @@ class _ExpandableOutlineViewState extends State<ExpandableOutlineView> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.grey[200],
+      color: Theme.of(context).brightness == Brightness.light 
+          ? Colors.white 
+          : Colors.grey[800],
       child: ListView(
         padding: const EdgeInsets.all(8.0),
         children: _buildHeadingList(_tree.roots),

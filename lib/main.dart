@@ -61,12 +61,21 @@ class MyApp extends StatelessWidget {
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.deepPurple,
+                seedColor: const Color(0xFF993300), // 深红棕色种子，不含蓝色
                 brightness: Brightness.dark,
+                // 定制深色背景
+                background: const Color(0xFF0A0A00), // 几乎黑色，无蓝色
+                surface: const Color(0xFF121200),    // 深色表面，无蓝色
+                onBackground: const Color(0xFFEAE0C0), // 浅黄色文本
+                onSurface: const Color(0xFFDAD0A0),    // 浅黄色表面文本
               ),
               brightness: Brightness.dark,
-              primaryColor: Colors.deepPurple,
-              primarySwatch: Colors.deepPurple,
+              primaryColor: const Color(0xFF993300), // 深红棕色
+              scaffoldBackgroundColor: const Color(0xFF050500), // 非常深的背景，无蓝色
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Color(0xFF201A00), // 深色应用栏，无蓝色
+                foregroundColor: Color(0xFFEAE0C0), // 浅黄色文本
+              ),
               useMaterial3: true,
               fontFamily: 'FangSong',
             ),
@@ -717,13 +726,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                           filled: true,
-                          fillColor: Theme.of(context).brightness == Brightness.light 
-                              ? Colors.white 
-                              : Colors.grey[800],
+                          fillColor: Theme.of(context).brightness == Brightness.dark 
+                              ? const Color(0xFF050500) // 深黑色，无蓝色
+                              : Colors.white,
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16.0,
                           fontFamily: 'monospace',
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? const Color(0xFFEAE0C0) // 浅黄色
+                              : null,
                         ),
                       ),
                     ),

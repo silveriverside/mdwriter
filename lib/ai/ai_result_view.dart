@@ -48,6 +48,7 @@ class _AiResultViewState extends State<AiResultView> {
   @override
   Widget build(BuildContext context) {
     final aiState = context.watch<AiState>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: widget.width,
@@ -63,7 +64,9 @@ class _AiResultViewState extends State<AiResultView> {
           // 标题栏
           Container(
             padding: const EdgeInsets.all(8.0),
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: isDark 
+                ? const Color(0xFF332200).withOpacity(0.3) // 深棕色，无蓝色
+                : Theme.of(context).primaryColor.withOpacity(0.1),
             child: const Row(
               children: [
                 Icon(Icons.auto_awesome),
@@ -78,13 +81,22 @@ class _AiResultViewState extends State<AiResultView> {
               padding: const EdgeInsets.all(16.0),
               margin: const EdgeInsets.all(8.0),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: isDark 
+                    ? const Color(0xFF330000).withOpacity(0.3) // 暗红色，无蓝色
+                    : Colors.red.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(
+                  color: isDark 
+                      ? const Color(0xFF550000).withOpacity(0.3) // 暗红色边框，无蓝色
+                      : Colors.red.withOpacity(0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red),
+                  Icon(
+                    Icons.error_outline, 
+                    color: isDark ? const Color(0xFFFF3300) : Colors.red
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -113,16 +125,20 @@ class _AiResultViewState extends State<AiResultView> {
   Widget _buildResultCard(BuildContext context, AiBlock block, int index) {
     final isEditing = _editingStates[index] ?? false;
     final controller = _getController(index, block.aiResult);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       margin: const EdgeInsets.all(8.0),
+      color: isDark ? Theme.of(context).colorScheme.surface : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(8.0),
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: isDark 
+                ? const Color(0xFF332200).withOpacity(0.3) // 深棕色，无蓝色
+                : Theme.of(context).primaryColor.withOpacity(0.1),
             child: Row(
               children: [
                 Text('块 #${index + 1}'),
@@ -162,6 +178,11 @@ class _AiResultViewState extends State<AiResultView> {
                         TextButton.icon(
                           icon: const Icon(Icons.edit),
                           label: const Text('编辑'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: isDark 
+                                ? const Color(0xFFEAA500) // 黄橙色，无蓝色
+                                : null,
+                          ),
                           onPressed: () {
                             setState(() {
                               _editingStates[index] = true;
@@ -171,6 +192,11 @@ class _AiResultViewState extends State<AiResultView> {
                         TextButton.icon(
                           icon: const Icon(Icons.sync_alt),
                           label: const Text('替换'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: isDark 
+                                ? const Color(0xFFFFAA00) // 亮橙色，无蓝色
+                                : null,
+                          ),
                           onPressed: () => widget.onReplace(block),
                         ),
                       ],
@@ -228,7 +254,9 @@ class _AiResultViewState extends State<AiResultView> {
                   ),
                   Container(
                     padding: const EdgeInsets.all(8.0),
-                    color: Colors.grey.withOpacity(0.1),
+                    color: isDark 
+                        ? const Color(0xFF221100).withOpacity(0.3) // 深褐色，无蓝色
+                        : Colors.grey.withOpacity(0.1),
                     child: Text(
                       // 根据折叠状态显示部分或全部内容
                       (_collapsedStates[index] ?? true)
@@ -253,7 +281,9 @@ class _AiResultViewState extends State<AiResultView> {
                 if (block.aiResult != null)
                   Container(
                     padding: const EdgeInsets.all(8.0),
-                    color: Colors.yellow.withOpacity(0.1),
+                    color: isDark 
+                        ? const Color(0xFF332200).withOpacity(0.2) // 深黄褐色，无蓝色
+                        : Colors.yellow.withOpacity(0.1),
                     child: isEditing
                       ? TextField(
                           controller: controller,
@@ -279,10 +309,13 @@ class _AiResultViewState extends State<AiResultView> {
                             h4: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.bold),
                             h5: const TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold),
                             h6: const TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),
-                            code: const TextStyle(
-                              backgroundColor: Color(0xFFEEEEEE),
+                            code: TextStyle(
+                              backgroundColor: isDark 
+                                  ? const Color(0xFF221100) // 深褐色，无蓝色
+                                  : const Color(0xFFEEEEEE),
                               fontFamily: 'monospace',
                               fontSize: 13.0,
+                              color: isDark ? const Color(0xFFFFCC00) : null, // 暗模式下的代码文本颜色
                             ),
                             blockquote: const TextStyle(
                               color: Colors.grey,

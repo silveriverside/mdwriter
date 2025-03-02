@@ -239,6 +239,9 @@ class _ModelConfigDialogWidgetState extends State<ModelConfigDialogWidget> {
 
     return AlertDialog(
       title: const Text('模型配置'),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark 
+          ? Theme.of(context).colorScheme.surface 
+          : null,
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -270,16 +273,20 @@ class _ModelConfigDialogWidgetState extends State<ModelConfigDialogWidget> {
                             // 为当前使用的配置添加标记
                             if (isCurrentlyUsed)
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF553300).withOpacity(0.3) // 深棕色，无蓝色
+                                      : Colors.green.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   '当前使用',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: Colors.green,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFFFFAA00) // 亮橙色，无蓝色
+                                        : Colors.green,
                                   ),
                                 ),
                               ),
@@ -301,7 +308,9 @@ class _ModelConfigDialogWidgetState extends State<ModelConfigDialogWidget> {
                   icon: const Icon(Icons.check_circle_outline),
                   tooltip: '使用此配置',
                   onPressed: _switchToSelectedConfig,
-                  color: Colors.green,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFAA7700) // 黄绿色，无蓝色
+                      : Colors.green,
                 ),
               ],
             ),
@@ -408,13 +417,21 @@ class _ModelConfigDialogWidgetState extends State<ModelConfigDialogWidget> {
           TextButton(
             onPressed: _deleteConfig,
             child: const Text('删除'),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFFF5500) // 亮橙红色，无蓝色
+                  : Colors.red,
+            ),
           ),
         // 切换按钮
         TextButton(
           onPressed: _switchToSelectedConfig,
           child: const Text('切换到此配置'),
-          style: TextButton.styleFrom(foregroundColor: Colors.green),
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFAA7700) // 暗橙色，无蓝色
+                : Colors.green,
+          ),
         ),
         // 取消按钮
         TextButton(
@@ -425,7 +442,11 @@ class _ModelConfigDialogWidgetState extends State<ModelConfigDialogWidget> {
         TextButton(
           onPressed: _saveConfig,
           child: const Text('保存修改'),
-          style: TextButton.styleFrom(foregroundColor: Colors.blue),
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFEAA500) // 黄橙色，无蓝色
+                : Colors.blue,
+          ),
         ),
       ],
     );
