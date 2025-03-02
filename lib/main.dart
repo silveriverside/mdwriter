@@ -17,6 +17,8 @@ import 'markdown/heading_actions.dart';
 import 'markdown/tag_actions.dart';
 import 'ai/model_config_dialog.dart';
 import 'utils/word_counter.dart';
+import 'widgets/resizable_panel_layout.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -117,6 +119,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   String _lastSavedContent = '';
   // 字数统计信息
   String _wordCountInfo = "0 字";
+  double? _savedLeftPanelWidth;
+  double? _savedMiddlePanelWidth;
+  double? _savedRightPanelWidth;
+
   @override
   void initState() {
     // 添加应用生命周期观察者
@@ -135,6 +141,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     
     // 初始化字数统计
     _updateWordCount();
+    
+    // 加载保存的面板宽度
+    _loadPanelLayout();
   }
 
   @override
@@ -567,6 +576,42 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  // 保存面板布局
+  void _savePanelLayout(double leftWidth, double middleWidth, double rightWidth) {
+    print('保存面板布局: 左 $leftWidth, 中 $middleWidth, 右 $rightWidth');
+    
+    setState(() {
+      _savedLeftPanelWidth = leftWidth;
+      _savedMiddlePanelWidth = middleWidth;
+      _savedRightPanelWidth = rightWidth;
+    });
+    
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setDouble('leftPanelWidth', leftWidth);
+      prefs.setDouble('middlePanelWidth', middleWidth);
+      prefs.setDouble('rightPanelWidth', rightWidth);
+    });
+  }
+
+  // 加载面板布局
+  void _loadPanelLayout() {
+    SharedPreferences.getInstance().then((prefs) {
+      final leftWidth = prefs.getDouble('leftPanelWidth');
+      final middleWidth = prefs.getDouble('middlePanelWidth');
+      final rightWidth = prefs.getDouble('rightPanelWidth');
+      
+      print('加载面板布局: 左 $leftWidth, 中 $middleWidth, 右 $rightWidth');
+      
+      if (leftWidth != null && middleWidth != null && rightWidth != null) {
+        setState(() {
+          _savedLeftPanelWidth = leftWidth;
+          _savedMiddlePanelWidth = middleWidth;
+          _savedRightPanelWidth = rightWidth;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final aiState = Provider.of<AiState>(context);
@@ -721,78 +766,77 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       body: Column(
         children: [
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 大纲视图
-                if (_showOutline)
-                  Expanded(
-                    flex: 1,
-                    child: OutlineView(
-                      headingTree: _headingTree,
-                      onHeadingTap: _jumpToLine,
-                      currentLine: _currentLine,
-                    ),
-                  ),
-                // 编辑器
-                Expanded(
-                  flex: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: RawKeyboardListener(
-                      focusNode: _keyboardListenerFocusNode,
-                      onKey: (RawKeyEvent event) {
-                        if (_handleRawKeyEvent(event)) {
-                          // 如果事件被处理，阻止事件继续传播
-                          return;
-                        }
-                      },
-                      child: TextField(
-                        controller: _textController,
-                        focusNode: _textFieldFocusNode,
-                        maxLines: null,
-                        expands: true,
-                        decoration: InputDecoration(
-                          hintText: '在这里输入或编辑文本...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(context).brightness == Brightness.dark 
-                              ? const Color(0xFF050500) // 深黑色，无蓝色
-                              : Colors.white,
-                        ),
-                        style: TextStyle(
-                          fontSize: 16.0,
-                          fontFamily: 'monospace',
-                          color: Theme.of(context).brightness == Brightness.dark 
-                              ? const Color(0xFFEAE0C0) // 浅黄色
-                              : null,
-                        ),
+            child: ResizablePanelLayout(
+              showLeftPanel: _showOutline,
+              showRightPanel: _showAiResultView && aiState.blocks.isNotEmpty,
+              initialLeftPanelWeight: 0.2,
+              initialRightPanelWeight: 0.4,
+              minLeftPanelWidth: 150.0,
+              minMiddlePanelWidth: 300.0,
+              minRightPanelWidth: 250.0,
+              onLayoutChanged: _savePanelLayout,
+              savedLeftPanelWidth: _savedLeftPanelWidth,
+              savedMiddlePanelWidth: _savedMiddlePanelWidth,
+              savedRightPanelWidth: _savedRightPanelWidth,
+              
+              // 大纲视图
+              leftPanel: OutlineView(
+                headingTree: _headingTree,
+                onHeadingTap: _jumpToLine,
+                currentLine: _currentLine,
+              ),
+              
+              // 编辑器
+              middlePanel: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: RawKeyboardListener(
+                  focusNode: _keyboardListenerFocusNode,
+                  onKey: (RawKeyEvent event) {
+                    if (_handleRawKeyEvent(event)) {
+                      return;
+                    }
+                  },
+                  child: TextField(
+                    controller: _textController,
+                    focusNode: _textFieldFocusNode,
+                    maxLines: null,
+                    expands: true,
+                    decoration: InputDecoration(
+                      hintText: '在这里输入或编辑文本...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.0),
                       ),
+                      filled: true,
+                      fillColor: Theme.of(context).brightness == Brightness.dark 
+                          ? const Color(0xFF050500) 
+                          : Colors.white,
+                    ),
+                    style: TextStyle(
+                      fontSize: 16.0,
+                      fontFamily: 'monospace',
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? const Color(0xFFEAE0C0) 
+                          : null,
                     ),
                   ),
                 ),
-                // AI 结果视图
-                if (_showAiResultView && aiState.blocks.isNotEmpty)
-                  Expanded(
-                    flex: 3,
-                    child: AiResultView(
-                      blocks: aiState.blocks,
-                      onReplace: (block) {
-                        final newText = aiState.replaceBlock(
-                          _textController.text,
-                          block,
-                        );
-                        if (newText != _textController.text) {
-                          setState(() {
-                            _textController.text = newText;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-              ],
+              ),
+              
+              // AI 结果视图
+              rightPanel: AiResultView(
+                blocks: aiState.blocks,
+                onReplace: (block) {
+                  final newText = aiState.replaceBlock(
+                    _textController.text,
+                    block,
+                  );
+                  if (newText != _textController.text) {
+                    setState(() {
+                      _textController.text = newText;
+                    });
+                  }
+                },
+              ),
             ),
           ),
           Container(

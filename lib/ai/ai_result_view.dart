@@ -92,16 +92,23 @@ class _AiResultViewState extends State<AiResultView> {
                 ),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.error_outline, 
-                    color: isDark ? const Color(0xFFFF3300) : Colors.red
+                    color: isDark ? const Color(0xFFFF3300) : Colors.red,
+                    size: 20,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       aiState.error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFFFF3300) : Colors.red,
+                        fontSize: 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 3,
                     ),
                   ),
                 ],
@@ -145,61 +152,73 @@ class _AiResultViewState extends State<AiResultView> {
                 const Spacer(),
                 if (block.aiResult != null)
                   if (isEditing)
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          icon: const Icon(Icons.save),
-                          label: const Text('保存'),
-                          onPressed: () {
-                            setState(() {
-                              _editingStates[index] = false;
-                              // 更新block的结果并触发替换
-                              block.aiResult = controller.text;
-                              widget.onReplace(block);
-                            });
-                          },
-                        ),
-                        TextButton.icon(
-                          icon: const Icon(Icons.cancel),
-                          label: const Text('取消'),
-                          onPressed: () {
-                            setState(() {
-                              _editingStates[index] = false;
-                              // 恢复原始内容
-                              controller.text = block.aiResult ?? '';
-                            });
-                          },
-                        ),
-                      ],
+                    Flexible(
+                      child: Wrap(
+                        spacing: 4.0,
+                        runSpacing: 4.0,
+                        alignment: WrapAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.save, size: 16),
+                            label: const Text('保存', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              setState(() {
+                                _editingStates[index] = false;
+                                // 更新block的结果并触发替换
+                                block.aiResult = controller.text;
+                                widget.onReplace(block);
+                              });
+                            },
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(Icons.cancel, size: 16),
+                            label: const Text('取消', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              setState(() {
+                                _editingStates[index] = false;
+                                // 恢复原始内容
+                                controller.text = block.aiResult ?? '';
+                              });
+                            },
+                          ),
+                        ],
+                      ),
                     )
                   else
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          icon: const Icon(Icons.edit),
-                          label: const Text('编辑'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: isDark 
-                                ? const Color(0xFFEAA500) // 黄橙色，无蓝色
-                                : null,
+                    Flexible(
+                      child: Wrap(
+                        spacing: 4.0,
+                        runSpacing: 4.0,
+                        alignment: WrapAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.edit, size: 16),
+                            label: const Text('编辑', style: TextStyle(fontSize: 12)),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                              foregroundColor: isDark 
+                                  ? const Color(0xFFEAA500) // 黄橙色，无蓝色
+                                  : null,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _editingStates[index] = true;
+                              });
+                            },
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _editingStates[index] = true;
-                            });
-                          },
-                        ),
-                        TextButton.icon(
-                          icon: const Icon(Icons.sync_alt),
-                          label: const Text('替换'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: isDark 
-                                ? const Color(0xFFFFAA00) // 亮橙色，无蓝色
-                                : null,
+                          TextButton.icon(
+                            icon: const Icon(Icons.sync_alt, size: 16),
+                            label: const Text('替换', style: TextStyle(fontSize: 12)),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                              foregroundColor: isDark 
+                                  ? const Color(0xFFFFAA00) // 亮橙色，无蓝色
+                                  : null,
+                            ),
+                            onPressed: () => widget.onReplace(block),
                           ),
-                          onPressed: () => widget.onReplace(block),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
               ],
             ),
@@ -238,10 +257,15 @@ class _AiResultViewState extends State<AiResultView> {
                         icon: Icon(
                           (_collapsedStates[index] ?? true) 
                               ? Icons.expand_more 
-                              : Icons.expand_less
+                              : Icons.expand_less,
+                          size: 16,
                         ),
                         label: Text(
-                          (_collapsedStates[index] ?? true) ? '展开' : '折叠'
+                          (_collapsedStates[index] ?? true) ? '展开' : '折叠',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                         ),
                         onPressed: () {
                           setState(() {
