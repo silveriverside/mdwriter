@@ -51,13 +51,16 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
   
   // 计算初始宽度
   void _calculateInitialWidths(double totalWidth) {
+    // 更新总宽度
+    _totalWidth = totalWidth;
+
     bool needsRecalculation = !_isInitialized || 
                             _totalWidth != totalWidth ||
                             _previousShowLeftPanel != widget.showLeftPanel ||
                             _previousShowRightPanel != widget.showRightPanel;
-    
+
     if (!needsRecalculation) return;
-    
+
     // 如果面板显示状态发生变化，重新分配空间
     if (_isInitialized) {
       if (!widget.showLeftPanel && _previousShowLeftPanel == true) {
@@ -93,8 +96,6 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
     _previousShowLeftPanel = widget.showLeftPanel;
     _previousShowRightPanel = widget.showRightPanel;
     
-    _totalWidth = totalWidth;
-    
     if (!_isInitialized) {
       // 首次初始化
       if (widget.savedLeftPanelWidth != null && 
@@ -117,13 +118,31 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
         // 使用默认权重
         _initializeWithDefaultWeights(totalWidth);
       }
-    } else if (_totalWidth != totalWidth) {
+    } else {
       // 窗口大小改变，按比例调整
       double ratio = totalWidth / _totalWidth;
       _leftPanelWidth *= ratio;
       _middlePanelWidth *= ratio;
       _rightPanelWidth *= ratio;
     }
+    
+    // 调整面板宽度，确保总宽度不超过可用宽度
+    double totalPanelWidth = _leftPanelWidth + _middlePanelWidth + _rightPanelWidth;
+    double dividerWidth = (widget.showLeftPanel ? 8.0 : 0.0) + (widget.showRightPanel ? 8.0 : 0.0);
+    if (totalPanelWidth + dividerWidth > _totalWidth) {
+      double excessWidth = totalPanelWidth + dividerWidth - _totalWidth;
+      double ratio = excessWidth / totalPanelWidth;
+
+      // 按比例缩减面板宽度
+      _leftPanelWidth -= _leftPanelWidth * ratio;
+      _middlePanelWidth -= _middlePanelWidth * ratio;
+      _rightPanelWidth -= _rightPanelWidth * ratio;
+    }
+    
+    // 确保所有宽度都是大于等于0的，避免负值导致布局错误
+    _leftPanelWidth = _leftPanelWidth.isNegative ? 0 : _leftPanelWidth;
+    _middlePanelWidth = _middlePanelWidth.isNegative ? 0 : _middlePanelWidth;
+    _rightPanelWidth = _rightPanelWidth.isNegative ? 0 : _rightPanelWidth;
     
     _applyMinWidthLimits();
     _isInitialized = true;
@@ -134,6 +153,9 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
         widget.onLayoutChanged!(_leftPanelWidth, _middlePanelWidth, _rightPanelWidth);
       }
     });
+
+    // 调试信息
+    print('总宽度: $_totalWidth, 左面板宽度: $_leftPanelWidth, 中间面板宽度: $_middlePanelWidth, 右面板宽度: $_rightPanelWidth');
   }
   
   // 使用默认权重初始化
@@ -141,23 +163,20 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
     double dividerWidth = (widget.showLeftPanel ? 8.0 : 0.0) + (widget.showRightPanel ? 8.0 : 0.0);
     double availableWidth = totalWidth - dividerWidth;
     
+    // 根据可用宽度的比例设置面板宽度
     if (widget.showLeftPanel && widget.showRightPanel) {
-      // 两个面板都显示
       _leftPanelWidth = availableWidth * widget.initialLeftPanelWeight;
       _rightPanelWidth = availableWidth * widget.initialRightPanelWeight;
       _middlePanelWidth = availableWidth - _leftPanelWidth - _rightPanelWidth;
     } else if (widget.showLeftPanel) {
-      // 只显示左侧面板
       _leftPanelWidth = availableWidth * widget.initialLeftPanelWeight;
       _middlePanelWidth = availableWidth - _leftPanelWidth;
       _rightPanelWidth = 0;
     } else if (widget.showRightPanel) {
-      // 只显示右侧面板
       _rightPanelWidth = availableWidth * widget.initialRightPanelWeight;
       _middlePanelWidth = availableWidth - _rightPanelWidth;
       _leftPanelWidth = 0;
     } else {
-      // 只显示中间面板
       _middlePanelWidth = availableWidth;
       _leftPanelWidth = 0;
       _rightPanelWidth = 0;
@@ -171,37 +190,23 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
   
   // 应用最小宽度限制
   void _applyMinWidthLimits() {
-    if (widget.showLeftPanel && _leftPanelWidth < widget.minLeftPanelWidth) {
-      _leftPanelWidth = widget.minLeftPanelWidth;
-    }
-    
-    if (_middlePanelWidth < widget.minMiddlePanelWidth) {
-      _middlePanelWidth = widget.minMiddlePanelWidth;
-    }
-    
-    if (widget.showRightPanel && _rightPanelWidth < widget.minRightPanelWidth) {
-      _rightPanelWidth = widget.minRightPanelWidth;
-    }
-    
-    // 确保总宽度不超过可用宽度
+    // 计算可用宽度
     double totalPanelWidth = _leftPanelWidth + _middlePanelWidth + _rightPanelWidth;
     double dividerWidth = (widget.showLeftPanel ? 8.0 : 0.0) + (widget.showRightPanel ? 8.0 : 0.0);
-    
+
+    // 确保总宽度不超过可用宽度
     if (totalPanelWidth + dividerWidth > _totalWidth) {
-      // 按比例缩减
-      double excessWidth = totalPanelWidth + dividerWidth - _totalWidth;
-      double ratio = excessWidth / totalPanelWidth;
-      
-      if (widget.showLeftPanel) {
+        double excessWidth = totalPanelWidth + dividerWidth - _totalWidth;
+        double ratio = excessWidth / totalPanelWidth;
+
+        // 按比例缩减面板宽度
         _leftPanelWidth -= _leftPanelWidth * ratio;
-      }
-      
-      _middlePanelWidth -= _middlePanelWidth * ratio;
-      
-      if (widget.showRightPanel) {
+        _middlePanelWidth -= _middlePanelWidth * ratio;
         _rightPanelWidth -= _rightPanelWidth * ratio;
-      }
     }
+
+    // 调试信息
+    print('应用宽度限制后: 左面板宽度: $_leftPanelWidth, 中间面板宽度: $_middlePanelWidth, 右面板宽度: $_rightPanelWidth');
   }
   
   // 重置面板布局
@@ -259,9 +264,12 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
           children: [
             // 左侧面板
             if (widget.showLeftPanel) ...[
-              SizedBox(
-                width: _leftPanelWidth,
-                child: widget.leftPanel,
+              Expanded(
+                flex: (_leftPanelWidth / _totalWidth * 100).round(),
+                child: SizedBox(
+                  width: _leftPanelWidth,
+                  child: widget.leftPanel,
+                ),
               ),
               ResizablePanelDivider(
                 onDrag: (delta) {
@@ -274,9 +282,12 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
             ],
             
             // 中间面板 - 始终显示，宽度根据可见的面板动态调整
-            SizedBox(
-              width: _middlePanelWidth,
-              child: widget.middlePanel,
+            Expanded(
+              flex: (_middlePanelWidth / _totalWidth * 100).round(),
+              child: SizedBox(
+                width: _middlePanelWidth,
+                child: widget.middlePanel,
+              ),
             ),
             
             // 右侧面板
@@ -289,9 +300,12 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
                 },
                 onDoubleTap: _resetLayout,
               ),
-              SizedBox(
-                width: _rightPanelWidth,
-                child: widget.rightPanel,
+              Expanded(
+                flex: (_rightPanelWidth / _totalWidth * 100).round(),
+                child: SizedBox(
+                  width: _rightPanelWidth,
+                  child: widget.rightPanel,
+                ),
               ),
             ],
           ],
