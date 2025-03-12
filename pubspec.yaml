@@ -16,6 +16,8 @@ dependencies:
   flutter_markdown: ^0.6.18
   shared_preferences: ^2.2.0
   http: ^1.2.0
+  flutter_math_fork: ^0.7.3
+  markdown: ^7.3.0
 
 dev_dependencies:
   flutter_test:

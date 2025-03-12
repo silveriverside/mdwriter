@@ -123,6 +123,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   double? _savedLeftPanelWidth;
   double? _savedMiddlePanelWidth;
   double? _savedRightPanelWidth;
+  final ScrollController _editorScrollController = ScrollController();
+  double? _savedScrollOffset;
+  Map<String, dynamic>? _savedScrollRatio;
 
   @override
   void initState() {
@@ -214,6 +217,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _textController.dispose();
     _textFieldFocusNode.dispose();
     _keyboardListenerFocusNode.dispose();
+    _editorScrollController.dispose();
     super.dispose();
   }
 
@@ -533,16 +537,44 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void _jumpToLine(int line) {
     final lines = _textController.text.split('\n');
     if (line >= 0 && line < lines.length) {
+      // 计算目标行的偏移量
       int offset = 0;
       for (int i = 0; i < line; i++) {
         offset += (lines[i].length + 1); // +1 for newline character
       }
+
+      // 设置光标位置
       _textController.selection = TextSelection.fromPosition(
         TextPosition(offset: offset),
       );
+
       setState(() {
         _currentLine = line;
       });
+
+      // 确保编辑器已经完成布局
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (_editorScrollController.hasClients) {
+          // 获取目标行的估计高度（使用固定行高20作为估计值）
+          final estimatedLineHeight = 20.0;
+          final targetPosition = offset * estimatedLineHeight / (lines[0].length + 1);
+          
+          // 计算视口高度的一半
+          final viewportHeight = _editorScrollController.position.viewportDimension;
+          final halfViewportHeight = viewportHeight / 2;
+          
+          // 计算目标滚动位置，使目标行位于视口中央
+          final targetScrollOffset = targetPosition - halfViewportHeight;
+          
+          // 确保滚动位置在有效范围内
+          final maxScrollExtent = _editorScrollController.position.maxScrollExtent;
+          final safeOffset = targetScrollOffset.clamp(0.0, maxScrollExtent);
+          
+          // 使用 jumpTo 立即滚动到目标位置
+          _editorScrollController.jumpTo(safeOffset);
+        }
+      });
+
       _textFieldFocusNode.requestFocus();
     }
   }
@@ -613,6 +645,70 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         });
       }
     });
+  }
+
+  // 保存滚动位置
+  void _saveScrollPosition(bool isDragging) {
+    try {
+      if (isDragging && _editorScrollController.hasClients) {
+        // 保存当前滚动位置和视口信息
+        _savedScrollRatio = {
+          'scrollOffset': _editorScrollController.offset,
+          'maxScrollExtent': _editorScrollController.position.maxScrollExtent,
+          'viewportDimension': _editorScrollController.position.viewportDimension,
+        };
+        
+        debugPrint('保存滚动位置 - 偏移量: ${_editorScrollController.offset}, '
+                   '最大滚动范围: ${_editorScrollController.position.maxScrollExtent}, '
+                   '视口高度: ${_editorScrollController.position.viewportDimension}');
+      }
+    } catch (e) {
+      debugPrint('保存滚动位置时出错: $e');
+    }
+  }
+
+  // 恢复滚动位置
+  void _restoreScrollPosition() {
+    try {
+      if (_editorScrollController.hasClients && _savedScrollRatio != null) {
+        // 使用较短的延迟
+        Future.delayed(Duration(milliseconds: 50), () {
+          if (!_editorScrollController.hasClients) return;
+          
+          final oldOffset = _savedScrollRatio!['scrollOffset'] as double;
+          final oldMaxExtent = _savedScrollRatio!['maxScrollExtent'] as double;
+          final oldViewportDimension = _savedScrollRatio!['viewportDimension'] as double;
+          
+          // 获取新的滚动范围
+          final newMaxExtent = _editorScrollController.position.maxScrollExtent;
+          final newViewportDimension = _editorScrollController.position.viewportDimension;
+          
+          // 计算相对位置比例
+          double ratio = oldOffset / oldMaxExtent;
+          if (oldMaxExtent == 0) ratio = 0;
+          
+          // 根据新的滚动范围计算目标位置
+          double targetOffset = ratio * newMaxExtent;
+          
+          // 考虑视口大小变化
+          if (oldViewportDimension != newViewportDimension) {
+            final viewportRatio = newViewportDimension / oldViewportDimension;
+            targetOffset = targetOffset * viewportRatio;
+          }
+          
+          // 确保目标位置在有效范围内
+          targetOffset = targetOffset.clamp(0.0, newMaxExtent);
+          
+          // 使用 jumpTo 避免动画导致的问题
+          _editorScrollController.jumpTo(targetOffset);
+          
+          debugPrint('恢复滚动位置 - 目标位置: $targetOffset/$newMaxExtent, '
+                     '视口高度: $newViewportDimension');
+        });
+      }
+    } catch (e) {
+      debugPrint('恢复滚动位置时出错: $e');
+    }
   }
 
   @override
@@ -807,6 +903,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               savedLeftPanelWidth: _savedLeftPanelWidth,
               savedMiddlePanelWidth: _savedMiddlePanelWidth,
               savedRightPanelWidth: _savedRightPanelWidth,
+              onDragStart: _saveScrollPosition,
+              onDragEnd: _restoreScrollPosition,
               
               // 大纲视图
               leftPanel: OutlineView(
@@ -825,28 +923,39 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       return;
                     }
                   },
-                  child: TextField(
-                    controller: _textController,
-                    focusNode: _textFieldFocusNode,
-                    maxLines: null,
-                    expands: true,
-                    decoration: InputDecoration(
-                      hintText: '在这里输入或编辑文本...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      filled: true,
-                      fillColor: Theme.of(context).brightness == Brightness.dark 
-                          ? const Color(0xFF050500) 
-                          : Colors.white,
-                    ),
-                    style: TextStyle(
-                      fontSize: 16.0,
-                      fontFamily: 'monospace',
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? const Color(0xFFEAE0C0) 
-                          : null,
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Container(
+                        height: constraints.maxHeight,
+                        child: SingleChildScrollView(
+                          controller: _editorScrollController,
+                          child: IntrinsicHeight(
+                            child: TextField(
+                              controller: _textController,
+                              focusNode: _textFieldFocusNode,
+                              maxLines: null,
+                              decoration: InputDecoration(
+                                hintText: '在这里输入或编辑文本...',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context).brightness == Brightness.dark 
+                                    ? const Color(0xFF050500) 
+                                    : Colors.white,
+                              ),
+                              style: TextStyle(
+                                fontSize: 16.0,
+                                fontFamily: 'monospace',
+                                color: Theme.of(context).brightness == Brightness.dark 
+                                    ? const Color(0xFFEAE0C0) 
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),

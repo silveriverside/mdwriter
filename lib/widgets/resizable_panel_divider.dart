@@ -5,6 +5,7 @@ class ResizablePanelDivider extends StatefulWidget {
   final Color? color;
   final double width;
   final VoidCallback? onDoubleTap;
+  final Function(bool)? onDragStateChanged;
   
   const ResizablePanelDivider({
     Key? key,
@@ -12,6 +13,7 @@ class ResizablePanelDivider extends StatefulWidget {
     this.color,
     this.width = 8.0,
     this.onDoubleTap,
+    this.onDragStateChanged,
   }) : super(key: key);
 
   @override
@@ -38,6 +40,7 @@ class _ResizablePanelDividerState extends State<ResizablePanelDivider> {
           setState(() {
             _isDragging = true;
           });
+          widget.onDragStateChanged?.call(true);
         },
         onHorizontalDragUpdate: (details) {
           widget.onDrag(details.delta.dx);
@@ -46,6 +49,7 @@ class _ResizablePanelDividerState extends State<ResizablePanelDivider> {
           setState(() {
             _isDragging = false;
           });
+          widget.onDragStateChanged?.call(false);
         },
         onDoubleTap: widget.onDoubleTap,
         behavior: HitTestBehavior.opaque,

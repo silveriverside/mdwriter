@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
+import 'package:flutter_math_fork/src/ast/style.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'ai_block.dart';
 import 'ai_state.dart';
 
@@ -43,6 +46,23 @@ class _AiResultViewState extends State<AiResultView> {
       _editControllers[blockIndex] = TextEditingController(text: initialText ?? '');
     }
     return _editControllers[blockIndex]!;
+  }
+
+  /// 自定义数学公式语法元素构建器
+  MarkdownElementBuilder _mathBuilder(bool isDisplayMode) {
+    return ElementBuilder(
+      buildWidget: (BuildContext context, element, textContent) {
+        String formula = element.textContent;
+        // 移除公式两端的 $ 符号
+        formula = formula.replaceAll(RegExp(r'^\$+|\$+$'), '');
+        return Math.tex(
+          formula,
+          textStyle: const TextStyle(fontSize: 16),
+          textScaleFactor: 1.2,
+          mathStyle: isDisplayMode ? MathStyle.display : MathStyle.text,
+        );
+      },
+    );
   }
 
   @override
@@ -362,6 +382,14 @@ class _AiResultViewState extends State<AiResultView> {
                       : MarkdownBody(
                           data: block.aiResult!,
                           selectable: true,
+                          builders: {
+                            'math': _mathBuilder(false),  // 行内公式
+                            'mathblock': _mathBuilder(true),  // 块级公式
+                          },
+                          inlineSyntaxes: [
+                            InlineMathSyntax(),  // 行内公式语法
+                            BlockMathSyntax(),   // 块级公式语法
+                          ],
                           styleSheet: MarkdownStyleSheet(
                             p: const TextStyle(fontSize: 14.0, height: 1.5),
                             h1: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
@@ -406,5 +434,42 @@ class _AiResultViewState extends State<AiResultView> {
     
     final firstLine = text.split('\n').first;
     return '$firstLine${text.length > firstLine.length ? '...' : ''}';
+  }
+}
+
+/// 自定义元素构建器
+class ElementBuilder extends MarkdownElementBuilder {
+  final Widget Function(BuildContext context, md.Element element, String? textContent) buildWidget;
+
+  ElementBuilder({required this.buildWidget});
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    // 使用 Builder 组件来获取正确的 BuildContext
+    return Builder(
+      builder: (context) => buildWidget(context, element, element.textContent),
+    );
+  }
+}
+
+/// 行内数学公式语法
+class InlineMathSyntax extends md.InlineSyntax {
+  InlineMathSyntax() : super(r'\$([^\$]+)\$');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text('math', match[1]!));
+    return true;
+  }
+}
+
+/// 块级数学公式语法
+class BlockMathSyntax extends md.InlineSyntax {  // 改为继承 InlineSyntax
+  BlockMathSyntax() : super(r'\$\$([\s\S]*?)\$\$');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text('mathblock', match[1]!.trim()));
+    return true;
   }
 }

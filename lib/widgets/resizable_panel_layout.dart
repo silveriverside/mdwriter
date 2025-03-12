@@ -17,6 +17,8 @@ class ResizablePanelLayout extends StatefulWidget {
   final double? savedLeftPanelWidth;
   final double? savedMiddlePanelWidth; 
   final double? savedRightPanelWidth;
+  final Function(bool)? onDragStart; // 添加这行
+  final Function()? onDragEnd;       // 添加这行
   
   const ResizablePanelLayout({
     Key? key,
@@ -34,6 +36,8 @@ class ResizablePanelLayout extends StatefulWidget {
     this.savedLeftPanelWidth,
     this.savedMiddlePanelWidth,
     this.savedRightPanelWidth,
+    this.onDragStart,
+    this.onDragEnd,
   }) : super(key: key);
 
   @override
@@ -277,6 +281,13 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
                   _handleLeftDividerDrag(delta);
                   setState(() {});
                 },
+                onDragStateChanged: (isDragging) {
+                  if (isDragging) {
+                    widget.onDragStart?.call(true);
+                  } else {
+                    widget.onDragEnd?.call();
+                  }
+                },
                 onDoubleTap: _resetLayout,
               ),
             ],
@@ -297,6 +308,13 @@ class _ResizablePanelLayoutState extends State<ResizablePanelLayout> {
                   if (delta == 0) return;
                   _handleRightDividerDrag(delta);
                   setState(() {});
+                },
+                onDragStateChanged: (isDragging) {
+                  if (isDragging) {
+                    widget.onDragStart?.call(true);
+                  } else {
+                    widget.onDragEnd?.call();
+                  }
                 },
                 onDoubleTap: _resetLayout,
               ),
